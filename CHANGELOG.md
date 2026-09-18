@@ -1,54 +1,54 @@
 # Changelog — Adaptive Server Core (ASC)
 
-Barcha o'zgarishlar va versiyalar ushbu hujjatda qayd etib boriladi.
+All notable changes and releases for Adaptive Server Core are documented in this file.
 
 ---
 
 ## [1.0.0] — 2026-09-18
 
-### Yangi Qo'shilgan Imkoniyatlar (Features)
-- **Gradle Multi-Module Arxitekturasi**:
-  - `asc-api`: Ochiq API interfeyslari, Bukkit eventlari (`MobCapAdjustEvent`, `RedstoneThrottleEvent`, `ChunkCatchUpEvent` va h.k.) hamda ma'lumotlar tuzilmalari.
-  - `asc-core`: Load-budget matematikasi, SQLite WAL ma'lumotlar ombori, sozlamalar va profillar boshqaruvi, in-game chest GUI.
-  - `asc-lazysim`: Unloaded chunklar uchun vaqt-delta matematikasi bilan ishlovchi lazy simulation dvigateli (Pechlar, Ekinlar, Villagerlar, Hayvonlar, Asalari uyalari).
-  - `asc-platform-paper-latest`: Paper 1.21+ va Folia uchun native region scheduler va per-player view distance hooklari.
-  - `asc-platform-paper-legacy`: Paper 1.16–1.19 legacy moslashuvi.
-  - `asc-platform-spigot`: Spigot standart fallback adapteri.
-  - `asc-platform-bukkit`: Minimal Bukkit baseline graceful degradation bilan.
-  - `asc-loader`: Runtime platformani avtomatik aniqlovchi universal jar moduli.
+### Initial Release Features
+- **Gradle Multi-Module Architecture**:
+  - `asc-api`: Public API interfaces, Bukkit events (`MobCapAdjustEvent`, `RedstoneThrottleEvent`, `ChunkCatchUpEvent`, `HopperThrottleEvent`), and data models.
+  - `asc-core`: Load-budget mathematics, SQLite WAL database, configuration and profiles management, in-game chest GUI.
+  - `asc-lazysim`: Chunk hibernation and lazy simulation engine with time-delta calculations (Furnaces, Crops, Villagers, Animals, Beehives).
+  - `asc-platform-paper-latest`: Native Paper 1.21+ and Folia regional scheduling support with per-player view distance.
+  - `asc-platform-paper-legacy`: Paper 1.16–1.19 legacy adaptation.
+  - `asc-platform-spigot`: Spigot standard fallback adapter.
+  - `asc-platform-bukkit`: Minimal Bukkit baseline with graceful degradation.
+  - `asc-loader`: Runtime platform auto-detection and universal distribution jar.
 
-- **Dinamik Mob Cap & Load-Budget**:
-  - Real-vaqt TPS va MSPT asosida gradientli PID scaling modeli.
-  - Kam o'yinchida jonli dunyo uchun 150% gacha mob cap ko'tarilishi.
-  - Qat'iy despawn whitelist (Nomlangan, xonakilashtirilgan, ipli va persistent moblar himoyalangan).
-  - Admin Live HUD (Action Bar va BossBar orqali real-vaqt monitoring).
+- **Dynamic Mob Cap & Load-Budget**:
+  - Real-time TPS and MSPT gradient scaling using PID-style mathematical curves.
+  - Up to 150% mob cap bonus during low player count or idle server headroom.
+  - Strict despawn whitelist (named, tamed, leashed, persistent, and passenger entities are protected).
+  - Admin Live HUD (Action Bar and BossBar real-time monitoring).
 
 - **Redstone & Hopper Watchdog**:
-  - Ring buferli signature loop detector (tebranuvchi soat looplarini aniqlash).
-  - Mexanizmni sindirmasdan sun'iy ravishda sekinlashtiruvchi pulse-throttling.
-  - Chunk bo'yicha hopper transfer chastotasi limiti (transfers/second).
-  - `/asc lagsources` koordinatalar bilan eng og'ir chunklar diagnostikasi.
+  - Ring-buffer signature loop detector to identify oscillating clock circuits.
+  - Non-destructive pulse throttling to maintain farm functionality at safe rates.
+  - Per-chunk hopper transfer frequency limits (transfers per second).
+  - `/asc lagsources` diagnostic command ranking heaviest chunks by estimated MSPT impact.
 
 - **Elytra & Chunk Generation Controller**:
-  - Tez uchayotgan o'yinchilarning tezlik va yo'nalish vektorini bashorat qilish.
-  - Past yuklama paytida oldindan yuklovchi predictive chunk pre-generation.
-  - MSPT yukiga qarab o'yinchilarning ko'rish masofasini (view-distance) silliq moslash.
+  - High-speed gliding trajectory calculation and velocity vector prediction.
+  - Predictive asynchronous pre-generation during idle server cycles.
+  - Dynamic per-player view and simulation distance scaling based on MSPT load.
 
 - **Chunk Hibernation & Lazy Simulation**:
-  - SQLite WAL persistent timestamp tizimi.
-  - Pechlarda pishirish va yonilg'i sarfini delta hisoblash (inventar sig'imidan toshmagan holda).
-  - Ekinlar uchun stoxastik yorug'lik va namlikka asoslangan o'sish modeli.
-  - Villager savdo restocklarini kunlik tsikllar bo'yicha tiklash.
-  - Bolalarning ulg'ayishi va ko'payish vaqtlarini tiklash.
-  - Asalari uyalarida asal darajasini oshirish.
-  - Tashqi plaginlar uchun ochiq `LazySimulatable` API.
+  - Persistent SQLite WAL timestamp storage with automatic stale record pruning.
+  - Mathematical simulation of furnace smelting and fuel consumption without inventory overflow.
+  - Deterministic crop growth progression factoring in soil hydration and light levels.
+  - Villager trade restocking based on elapsed Minecraft day cycles.
+  - Baby animal maturation and breeding cooldown reset.
+  - Beehive honey level accumulation.
+  - Open `LazySimulatable` API for third-party plugin integrations.
 
-- **Integratsiyalar & Diagnostika**:
-  - ClearLag va LaggRemover bilan konflikt bo'lmasligi uchun avtomatik `COMPATIBILITY_REDUCED` rejimi.
-  - WorldGuard, Chunky, MythicMobs va PlaceholderAPI integratsiyalari.
-  - `/asc diagnose` orqali to'liq server diagnostikasi.
+- **Compatibility Shims & Integrations**:
+  - Conflict avoidance: switches to `COMPATIBILITY_REDUCED` mode when ClearLag or LaggRemover is present.
+  - WorldGuard, Chunky, MythicMobs, and PlaceholderAPI integrations.
+  - `/asc diagnose` comprehensive diagnostic report.
 
-- **Boshqaruv & In-Game GUI**:
-  - 54-slotli interaktiv boshqaruv paneli (`/asc gui`).
-  - `/asc reload`, `/asc status`, `/asc profile save|load|list`.
-  - Tab-completion qo'llab-quvvatlashi.
+- **Management & In-Game GUI**:
+  - 54-slot interactive chest control panel (`/asc gui`).
+  - `/asc reload`, `/asc status`, and `/asc profile save|load|list`.
+  - Contextual tab completion for all commands.

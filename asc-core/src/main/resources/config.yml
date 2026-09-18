@@ -9,23 +9,23 @@ core:
   metrics-sample-rate-seconds: 1
 
 # ------------------------------------------------------------------------------
-# 2.1 DINAMIK / ADAPTIV MOB CAP TIZIMI (Load-Budget Model)
+# 2.1 DYNAMIC & ADAPTIVE MOB CAP SYSTEM (Load-Budget Model)
 # ------------------------------------------------------------------------------
 mobcap:
-  # Modulni yoqish / o'chirish
+  # Enable or disable the dynamic mob cap module
   enabled: true
 
-  # Maqsadli ishlash ko'rsatkichlari (Target performance metrics)
+  # Target performance thresholds
   target-mspt: 40.0
   target-tps: 20.0
 
-  # Kam o'yinchi bo'lganda yoki server resursi bo'sh bo'lganda cap ko'payishi (1.0 = 100%, 1.5 = 150%)
+  # Cap bonus multiplier under low player count or idle server load (1.0 = 100%, 1.5 = 150%)
   max-bonus-multiplier: 1.5
 
-  # Yuqori yuk bo'lganda cap pasayishining minimal chegarasi (0.25 = bazaviy limitning 25% dan kamaymaydi)
+  # Minimum floor multiplier during peak stress (0.25 = caps will not drop below 25% of base)
   min-floor-multiplier: 0.25
 
-  # Faolsiz / uzoq entity'larni avtomatik tozalash (faqat yuqori yukda ishlaydi)
+  # Automatic distant inactive entity despawn sweep (only activates under heavy load)
   despawn-sweep:
     enabled: true
     interval-seconds: 10
@@ -33,31 +33,31 @@ mobcap:
     max-per-sweep: 50
 
 # ------------------------------------------------------------------------------
-# 2.2 REDSTONE VA HOPPER WATCHDOG (Anti-Lag-Machine)
+# 2.2 REDSTONE AND HOPPER WATCHDOG (Anti-Lag-Machine)
 # ------------------------------------------------------------------------------
 redstone-watchdog:
   enabled: true
 
-  # Bir xil kichik zonada (3x3x3) 1 soniyadagi yangilanish chegarasi
-  # Agar oshsa, mexanizm 'tebranuvchi soat' deb belgilanadi va throttle qilinadi
+  # Update threshold in a single localized volume (3x3x3) per second
+  # If exceeded, the mechanism is tagged as an oscillating loop and throttled
   frequency-threshold: 16
 
-  # Hopper item-o'tkazish chegarasi (chunk bo'yicha 1 soniyada maksimal transferlar)
+  # Hopper item transfer rate limit (maximum transfers per second per chunk)
   hopper-transfer-limit: 50
 
-  # Whitelist / Texnik zonalar (bu chunklarda cheklovlar ishlamaydi)
+  # Whitelist / Technical zones (throttling is bypassed in these chunks)
   whitelisted-chunks: []
 
 # ------------------------------------------------------------------------------
-# 2.3 ELYTRA VA CHUNK GENERATSIYASI NAZORATI
+# 2.3 ELYTRA AND CHUNK GENERATION CONTROLLER
 # ------------------------------------------------------------------------------
 chunk-throttle:
   enabled: true
 
-  # Tez uchayotgan o'yinchilar traektoriyasi bo'yicha oldindan yuklash (predictive pre-gen)
+  # Predictive asynchronous pre-generation along fast-flying player trajectories
   predictive-pregen: true
 
-  # Server MSPT yukiga qarab ko'rish masofasini dinamik moslash
+  # Dynamic view and simulation distance adaptation based on server MSPT load
   dynamic-view-distance:
     enabled: true
     min-distance: 6
@@ -65,24 +65,24 @@ chunk-throttle:
     step-interval-seconds: 10
 
 # ------------------------------------------------------------------------------
-# 2.4 CHUNK HIBERNATION / "LAZY SIMULATION" DVIGATELI
+# 2.4 CHUNK HIBERNATION & "LAZY SIMULATION" ENGINE
 # ------------------------------------------------------------------------------
 lazysim:
   enabled: true
 
-  # Catch-up qilinadigan maksimal vaqt chegarasi (soatlarda, 168 = 7 kun)
+  # Maximum catch-up simulation duration cap (in hours, 168 = 7 days)
   max-catchup-hours: 168
 
-  # Qayta yuklanganda simulyatsiya qilinadigan tizimlar
+  # Subsystems simulated via mathematical delta upon chunk reawakening
   processors:
-    furnaces: true     # Pechlarda yonilg'i va pishirish hisob-kitobi
-    crops: true        # O'simliklar o'sishi (deterministik formula)
-    villagers: true    # Qishloq aholisi savdo restocklari (MC kunlari bo'yicha)
-    animals: true      # Bolalarning ulg'ayishi va breeding cooldown
-    beehives: true     # Asalari uyalari va asal darajasi
+    furnaces: true     # Smelting progress and fuel consumption without overflow
+    crops: true        # Deterministic crop growth based on moisture and light
+    villagers: true    # Villager trading restocks based on Minecraft day cycles
+    animals: true      # Baby animal maturation and breeding cooldown reset
+    beehives: true     # Beehive and bee nest honey level accumulation
 
 # ------------------------------------------------------------------------------
-# 3. MOSLASHUV VA INTEGRATSIYALAR (Compatibility Shims)
+# 3. COMPATIBILITY AND INTEGRATIONS (Compatibility Shims)
 # ------------------------------------------------------------------------------
 compatibility:
   auto-detect-anti-lag: true
