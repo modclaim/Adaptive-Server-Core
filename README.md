@@ -124,7 +124,7 @@ External plugins can depend on the `asc-api` module via Maven or Gradle:
 
 ```kotlin
 dependencies {
-    compileOnly("net.modclaim.asc:asc-api:1.0.0-SNAPSHOT")
+    compileOnly("net.modclaim.asc:asc-api:1.0.1")
 }
 ```
 
@@ -166,15 +166,15 @@ Building ASC requires Java 21 and Gradle:
 ./gradlew check test
 
 # Package both Universal and platform-specific JARs:
-./gradlew shadowJar
+./gradlew releaseJars
 ```
 
-Packaged distribution JARs will be generated in:
-- `asc-loader/build/libs/AdaptiveServerCore-Universal-1.0.0-SNAPSHOT.jar`
-- `asc-platform-paper-latest/build/libs/AdaptiveServerCore-Paper-1.21-1.0.0-SNAPSHOT.jar`
-- `asc-platform-paper-legacy/build/libs/AdaptiveServerCore-Paper-Legacy-1.0.0-SNAPSHOT.jar`
-- `asc-platform-spigot/build/libs/AdaptiveServerCore-Spigot-1.0.0-SNAPSHOT.jar`
-- `asc-platform-bukkit/build/libs/AdaptiveServerCore-Bukkit-1.0.0-SNAPSHOT.jar`
+Packaged distribution JARs will be generated in `release/`:
+- `release/AdaptiveServerCore-Universal.jar`
+- `release/AdaptiveServerCore-Paper-1.21.jar`
+- `release/AdaptiveServerCore-Paper-Legacy.jar`
+- `release/AdaptiveServerCore-Spigot.jar`
+- `release/AdaptiveServerCore-Bukkit.jar`
 
 ---
 

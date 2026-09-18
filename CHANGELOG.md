@@ -4,6 +4,39 @@ All notable changes and releases for Adaptive Server Core are documented in this
 
 ---
 
+## [1.0.1] — 2026-09-18
+
+### 🐛 Critical Bug Fixes
+- **Player Skin Layer Desync**:
+  - Fixed a desynchronization bug where player skins would load only half-way (missing 3D jacket, sleeve, and pant layers) on Paper 1.20–1.21+ servers.
+  - View distance and simulation distance adjustments are now strictly dispatched on the main server thread (`scheduler.runSync`), preserving clientbound entity tracker bitmasks.
+  - Added hysteresis damping (requiring sustained high load for 3+ streaks or low load for 5+ streaks) to eliminate view distance flapping.
+
+- **Elytra Gliding & Fast Player Scatter Chunk Stalls**:
+  - Fixed severe lag and chunk loading freezes when flying at maximum speed with Elytra or when players scatter quickly into unloaded terrain.
+  - Added a fast-exit check in `PlayerMoveEvent` for non-gliding players, eliminating unnecessary coordinate math during walking and running.
+  - Rate-limited Elytra trajectory tracking to at most once every 500ms per player (2 checks/second instead of 30+).
+  - Introduced an `inFlightChunks` deduplication registry to prevent spamming duplicate asynchronous chunk load requests to Paper's `ChunkTaskScheduler`.
+
+- **Console Log Spam & Main Thread Micro-Freezes**:
+  - Eliminated synchronous SQLite disk I/O on the main server tick thread during chunk hibernation updates.
+  - Implemented a non-blocking in-memory write-behind buffer backed by a daemon background executor (`asyncFlusher`) committing batched writes every 5 seconds.
+  - Completely resolved `SQLITE_BUSY` database lock warnings and 10–50ms main thread pauses under heavy chunk unload volume.
+
+- **Natural World Generation Spawns**:
+  - Excluded `CHUNK_GEN` spawn reason from mob cap throttling in `DefaultMobCapService`. Animals and ambient creatures generated with new chunks are now preserved without interruption.
+
+### 🎨 In-Game Admin GUI Enhancements
+- **Click Protection**: Implemented `ASCGuiHolder` across all platforms to prevent items from being picked up or moved into player inventories upon clicking.
+- **Intuitive Minecraft Item Icons**:
+  - MobCap Module: `SPAWNER`
+  - Redstone Watchdog: `REPEATER`
+  - Chunk & Elytra Throttle: `ELYTRA`
+  - Lazy Simulation: `FURNACE`
+- **Dedicated Status Blocks**: Added clear, individual Green Concrete (`LIME_CONCRETE`) and Red Concrete (`RED_CONCRETE`) toggle switch blocks directly underneath each module icon for effortless visual management.
+
+---
+
 ## [1.0.0] — 2026-09-18
 
 ### Initial Release Features

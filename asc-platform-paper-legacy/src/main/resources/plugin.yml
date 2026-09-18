@@ -1,5 +1,5 @@
 name: AdaptiveServerCore
-version: 1.0.0
+version: 1.0.1
 main: net.modclaim.asc.platform.paperlegacy.AdaptiveServerCorePaperLegacyPlugin
 api-version: '1.18'
 author: ModClaim
