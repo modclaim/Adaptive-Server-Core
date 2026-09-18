@@ -54,20 +54,25 @@ public final class DefaultChunkThrottleService implements ChunkThrottleService, 
         this.distanceManager = new DynamicDistanceManager(6, 12, scheduler);
     }
 
+    private boolean initialized = false;
+
     @Override
     public void enable() {
         this.enabled = true;
-        // Schedule dynamic distance updates based on MSPT (every 10 seconds)
-        scheduler.runAsyncTimer(() -> {
-            if (enabled) {
-                distanceManager.updateLoad(metricsTracker.getMspt());
-            }
-        }, 5000L, 10000L);
+        if (!initialized) {
+            this.initialized = true;
+            // Schedule dynamic distance updates based on MSPT (every 10 seconds)
+            scheduler.runAsyncTimer(() -> {
+                if (enabled) {
+                    distanceManager.updateLoad(metricsTracker.getMspt());
+                }
+            }, 5000L, 10000L);
 
-        // Periodically clear stale in-flight cache (every 30 seconds)
-        scheduler.runAsyncTimer(inFlightChunks::clear, 30000L, 30000L);
+            // Periodically clear stale in-flight cache (every 30 seconds)
+            scheduler.runAsyncTimer(inFlightChunks::clear, 30000L, 30000L);
 
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+            Bukkit.getPluginManager().registerEvents(this, plugin);
+        }
     }
 
     @Override

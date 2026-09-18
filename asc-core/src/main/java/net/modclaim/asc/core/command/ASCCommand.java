@@ -6,6 +6,7 @@ import net.modclaim.asc.api.mobcap.MobCategory;
 import net.modclaim.asc.api.redstone.LagSource;
 import net.modclaim.asc.core.config.ProfileManager;
 import net.modclaim.asc.core.gui.ASCAdminGUI;
+import net.modclaim.asc.core.scheduler.ServerSchedulerAdapter;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.World;
@@ -26,10 +27,14 @@ public final class ASCCommand implements CommandExecutor {
     private final ProfileManager profileManager;
     private final ASCAdminGUI adminGui;
 
-    public ASCCommand(@NotNull ASCPlugin plugin, @NotNull ProfileManager profileManager) {
+    public ASCCommand(@NotNull ASCPlugin plugin, @NotNull ProfileManager profileManager, @NotNull ServerSchedulerAdapter scheduler) {
         this.plugin = plugin;
         this.profileManager = profileManager;
-        this.adminGui = new ASCAdminGUI(plugin);
+        this.adminGui = new ASCAdminGUI(plugin, scheduler);
+    }
+
+    public ASCCommand(@NotNull ASCPlugin plugin, @NotNull ProfileManager profileManager) {
+        this(plugin, profileManager, new ServerSchedulerAdapter(plugin));
     }
 
     @Override

@@ -44,15 +44,20 @@ public final class DefaultRedstoneWatchdogService implements RedstoneWatchdogSer
         this.lagSourceTracker = new LagSourceTracker(loopDetector, hopperWatchdog);
     }
 
+    private boolean initialized = false;
+
     @Override
     public void enable() {
         this.enabled = true;
-        // Schedule 1-second rolling reset for hopper metrics
-        scheduler.runAsyncTimer(hopperWatchdog::resetPerSecondWindow, 1000L, 1000L);
-        // Schedule cleanup of stale loop detector records
-        scheduler.runAsyncTimer(loopDetector::cleanupStaleRecords, 5000L, 5000L);
+        if (!initialized) {
+            this.initialized = true;
+            // Schedule 1-second rolling reset for hopper metrics
+            scheduler.runAsyncTimer(hopperWatchdog::resetPerSecondWindow, 1000L, 1000L);
+            // Schedule cleanup of stale loop detector records
+            scheduler.runAsyncTimer(loopDetector::cleanupStaleRecords, 5000L, 5000L);
 
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+            Bukkit.getPluginManager().registerEvents(this, plugin);
+        }
     }
 
     @Override

@@ -64,12 +64,17 @@ public final class DefaultLazySimService implements LazySimService, Listener {
         registerProcessor(new BeehiveProcessor());
     }
 
+    private boolean initialized = false;
+
     @Override
     public void enable() {
         this.enabled = true;
-        // Periodic pruning of records older than 14 days
-        scheduler.runAsyncTimer(this::purgeStaleRecords, 60000L, 3600000L);
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+        if (!initialized) {
+            this.initialized = true;
+            // Periodic pruning of records older than 14 days
+            scheduler.runAsyncTimer(this::purgeStaleRecords, 60000L, 3600000L);
+            Bukkit.getPluginManager().registerEvents(this, plugin);
+        }
     }
 
     @Override

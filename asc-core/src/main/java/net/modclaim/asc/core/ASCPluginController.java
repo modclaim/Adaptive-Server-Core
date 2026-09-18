@@ -87,7 +87,7 @@ public final class ASCPluginController {
         // 3. Register Commands & Tab Completers
         PluginCommand cmd = plugin.getCommand("asc");
         if (cmd != null) {
-            ASCCommand executor = new ASCCommand((ASCPlugin) plugin, profileManager);
+            ASCCommand executor = new ASCCommand((ASCPlugin) plugin, profileManager, scheduler);
             cmd.setExecutor(executor);
             cmd.setTabCompleter(new ASCTabCompleter(profileManager));
         }

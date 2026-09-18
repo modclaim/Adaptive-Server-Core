@@ -7,7 +7,13 @@ import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import net.modclaim.asc.core.scheduler.ServerSchedulerAdapter;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
+import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -44,10 +50,16 @@ public final class ASCAdminGUI implements Listener {
 
     private static final String GUI_TITLE = ChatColor.DARK_GRAY + "" + ChatColor.BOLD + "ASC Core Control Panel";
     private final ASCPlugin plugin;
+    private final ServerSchedulerAdapter scheduler;
+
+    public ASCAdminGUI(@NotNull ASCPlugin plugin, @NotNull ServerSchedulerAdapter scheduler) {
+        this.plugin = plugin;
+        this.scheduler = scheduler;
+        Bukkit.getPluginManager().registerEvents(this, plugin);
+    }
 
     public ASCAdminGUI(@NotNull ASCPlugin plugin) {
-        this.plugin = plugin;
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+        this(plugin, new ServerSchedulerAdapter(plugin));
     }
 
     public void open(@NotNull Player player) {
@@ -57,6 +69,7 @@ public final class ASCAdminGUI implements Listener {
 
         render(inv);
         player.openInventory(inv);
+        playOpenSound(player);
     }
 
     /**
@@ -232,109 +245,182 @@ public final class ASCAdminGUI implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getView() == null) return;
+        Inventory topInv = event.getView().getTopInventory();
+        if (topInv == null) return;
 
-        // Strict verification: custom holder or title match
-        boolean isAsc = (event.getInventory() != null && event.getInventory().getHolder() instanceof ASCGuiHolder)
-                || ChatColor.stripColor(event.getView().getTitle()).contains("ASC Core Control Panel");
+        // Verify if this inventory is the ASC Control Panel via Holder or title fallback
+        boolean isAsc = (topInv.getHolder() instanceof ASCGuiHolder);
+        if (!isAsc) {
+            try {
+                String title = event.getView().getTitle();
+                if (title != null && ChatColor.stripColor(title).contains("ASC Core Control Panel")) {
+                    isAsc = true;
+                }
+            } catch (Throwable ignored) {}
+        }
 
         if (!isAsc) return;
 
-        // 1. ALWAYS cancel click inside the GUI to strictly prevent item picking/taking!
+        // 1. ALWAYS cancel and deny click across all versions to prevent taking or moving items
         event.setCancelled(true);
+        event.setResult(Event.Result.DENY);
 
         if (!(event.getWhoClicked() instanceof Player player)) return;
 
-        // Check if click was in the top GUI inventory
+        // Ignore clicks outside or in player inventory (while keeping them strictly cancelled)
         int rawSlot = event.getRawSlot();
         if (rawSlot < 0 || rawSlot >= 54) {
-            return; // Clicked in player's own inventory while GUI is open, keep cancelled
+            return;
         }
 
-        Inventory inv = event.getView().getTopInventory();
         boolean toggled = false;
 
         // Handle slots: Icon (Row 2) OR Toggle Switch (Row 3)
         if (rawSlot == 19 || rawSlot == 28) {
             // MobCap Service
-            if (plugin.getMobCapService().isEnabled()) {
-                plugin.getMobCapService().disable();
-                player.sendMessage(ChatColor.YELLOW + "[ASC] MobCap Service: " + ChatColor.RED + "DISABLED");
-            } else {
+            boolean newState = !plugin.getMobCapService().isEnabled();
+            if (newState) {
                 plugin.getMobCapService().enable();
-                player.sendMessage(ChatColor.YELLOW + "[ASC] MobCap Service: " + ChatColor.GREEN + "ENABLED");
+            } else {
+                plugin.getMobCapService().disable();
             }
+            try {
+                plugin.getConfig().set("modules.mobcap.enabled", newState);
+                plugin.saveConfig();
+            } catch (Throwable ignored) {}
+
+            sendToggleFeedback(player, "MobCap Service", newState);
             toggled = true;
         } else if (rawSlot == 21 || rawSlot == 30) {
             // Redstone Watchdog
-            if (plugin.getRedstoneWatchdog().isEnabled()) {
-                plugin.getRedstoneWatchdog().disable();
-                player.sendMessage(ChatColor.YELLOW + "[ASC] Redstone Watchdog: " + ChatColor.RED + "DISABLED");
-            } else {
+            boolean newState = !plugin.getRedstoneWatchdog().isEnabled();
+            if (newState) {
                 plugin.getRedstoneWatchdog().enable();
-                player.sendMessage(ChatColor.YELLOW + "[ASC] Redstone Watchdog: " + ChatColor.GREEN + "ENABLED");
+            } else {
+                plugin.getRedstoneWatchdog().disable();
             }
+            try {
+                plugin.getConfig().set("modules.redstone.enabled", newState);
+                plugin.saveConfig();
+            } catch (Throwable ignored) {}
+
+            sendToggleFeedback(player, "Redstone Watchdog", newState);
             toggled = true;
         } else if (rawSlot == 23 || rawSlot == 32) {
-            // Chunk Throttle
-            if (plugin.getChunkThrottleService().isEnabled()) {
-                plugin.getChunkThrottleService().disable();
-                player.sendMessage(ChatColor.YELLOW + "[ASC] Chunk & Elytra Throttle: " + ChatColor.RED + "DISABLED");
-            } else {
+            // Chunk & Elytra Throttle
+            boolean newState = !plugin.getChunkThrottleService().isEnabled();
+            if (newState) {
                 plugin.getChunkThrottleService().enable();
-                player.sendMessage(ChatColor.YELLOW + "[ASC] Chunk & Elytra Throttle: " + ChatColor.GREEN + "ENABLED");
+            } else {
+                plugin.getChunkThrottleService().disable();
             }
+            try {
+                plugin.getConfig().set("modules.chunk-throttle.enabled", newState);
+                plugin.saveConfig();
+            } catch (Throwable ignored) {}
+
+            sendToggleFeedback(player, "Chunk & Elytra Throttle", newState);
             toggled = true;
         } else if (rawSlot == 25 || rawSlot == 34) {
             // Lazy Sim
-            if (plugin.getLazySimService().isEnabled()) {
-                plugin.getLazySimService().disable();
-                player.sendMessage(ChatColor.YELLOW + "[ASC] Lazy Simulation: " + ChatColor.RED + "DISABLED");
-            } else {
+            boolean newState = !plugin.getLazySimService().isEnabled();
+            if (newState) {
                 plugin.getLazySimService().enable();
-                player.sendMessage(ChatColor.YELLOW + "[ASC] Lazy Simulation: " + ChatColor.GREEN + "ENABLED");
+            } else {
+                plugin.getLazySimService().disable();
             }
+            try {
+                plugin.getConfig().set("modules.lazysim.enabled", newState);
+                plugin.saveConfig();
+            } catch (Throwable ignored) {}
+
+            sendToggleFeedback(player, "Lazy Simulation Engine", newState);
             toggled = true;
         } else if (rawSlot == 40) {
-            // Refresh lag sources
-            player.sendMessage(ChatColor.YELLOW + "[ASC] Diagnostics refreshed!");
+            // Refresh diagnostics
+            playClickSound(player, 1.5f);
+            player.sendActionBar(ChatColor.AQUA + "↻ [ASC] Diagnostics refreshed!");
+            player.sendMessage(ChatColor.AQUA + "[ASC] Diagnostics refreshed!");
             toggled = true;
         } else if (rawSlot == 48) {
-            // Reload Config
+            // Hot Reload Config
             plugin.reloadConfig();
             plugin.getMobCapService().reload();
             plugin.getRedstoneWatchdog().reload();
             plugin.getCompatibilityService().reload();
-            player.sendMessage(ChatColor.GREEN + "[ASC] Configuration reloaded successfully!");
+            try {
+                player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 1.5f);
+            } catch (Throwable ignored) {}
+            player.sendActionBar(ChatColor.GREEN + "✔ [ASC] Config & Profiles Hot-Reloaded!");
+            player.sendMessage(ChatColor.GREEN + "[ASC] Configuration and all profiles reloaded successfully!");
             toggled = true;
         } else if (rawSlot == 50) {
             // Close
+            playClickSound(player, 0.8f);
             player.closeInventory();
             return;
         }
 
         if (toggled) {
-            playClickSound(player);
-            render(inv);
+            // Re-render and force client visual inventory resynchronization on NEXT TICK
+            scheduler.runSync(() -> {
+                if (player.isOnline() && player.getOpenInventory().getTopInventory().getHolder() instanceof ASCGuiHolder) {
+                    render(topInv);
+                    player.updateInventory();
+                }
+            });
         }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onInventoryDrag(InventoryDragEvent event) {
         if (event.getView() == null) return;
+        Inventory topInv = event.getView().getTopInventory();
+        if (topInv == null) return;
 
-        boolean isAsc = (event.getInventory() != null && event.getInventory().getHolder() instanceof ASCGuiHolder)
-                || ChatColor.stripColor(event.getView().getTitle()).contains("ASC Core Control Panel");
+        boolean isAsc = (topInv.getHolder() instanceof ASCGuiHolder);
+        if (!isAsc) {
+            try {
+                String title = event.getView().getTitle();
+                if (title != null && ChatColor.stripColor(title).contains("ASC Core Control Panel")) {
+                    isAsc = true;
+                }
+            } catch (Throwable ignored) {}
+        }
 
         if (isAsc) {
             event.setCancelled(true);
+            event.setResult(Event.Result.DENY);
         }
     }
 
-    private static void playClickSound(@NotNull Player player) {
+    private static void sendToggleFeedback(@NotNull Player player, @NotNull String featureName, boolean newState) {
+        // 1. Crisp sound feedback (Block note pling: pitch 2.0 for ON, 0.7 for OFF)
         try {
-            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.6f, 1.2f);
+            float pitch = newState ? 2.0f : 0.7f;
+            player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_PLING, 1.0f, pitch);
         } catch (Throwable ignored) {
-            // Fallback gracefully on servers with custom sounds
+            playClickSound(player, newState ? 1.4f : 0.8f);
         }
+
+        // 2. Action Bar notification (Directly visible while chest inventory is open!)
+        String statusActionBar = newState ? (ChatColor.GREEN + "✔ ENABLED") : (ChatColor.RED + "✖ DISABLED");
+        player.sendActionBar(ChatColor.GOLD + "[ASC] " + ChatColor.WHITE + featureName + ": " + statusActionBar);
+
+        // 3. Chat message
+        String statusChat = newState ? (ChatColor.GREEN + "ENABLED") : (ChatColor.RED + "DISABLED");
+        player.sendMessage(ChatColor.GOLD + "[ASC] " + ChatColor.YELLOW + featureName + " is now " + statusChat);
+    }
+
+    private static void playOpenSound(@NotNull Player player) {
+        try {
+            player.playSound(player.getLocation(), Sound.BLOCK_CHEST_OPEN, 0.6f, 1.2f);
+        } catch (Throwable ignored) {}
+    }
+
+    private static void playClickSound(@NotNull Player player, float pitch) {
+        try {
+            player.playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 0.8f, pitch);
+        } catch (Throwable ignored) {}
     }
 }

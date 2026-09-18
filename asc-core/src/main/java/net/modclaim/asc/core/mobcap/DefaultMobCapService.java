@@ -92,26 +92,31 @@ public final class DefaultMobCapService implements MobCapService, Listener {
         return MobCategory.MISC;
     }
 
+    private boolean initialized = false;
+
     @Override
     public void enable() {
         this.enabled = true;
-        recalculateBudget();
-        this.monitorBossBar = Bukkit.createBossBar(
-                ChatColor.GOLD + "ASC Performance Monitor",
-                BarColor.GREEN,
-                BarStyle.SOLID
-        );
+        if (!initialized) {
+            this.initialized = true;
+            recalculateBudget();
+            this.monitorBossBar = Bukkit.createBossBar(
+                    ChatColor.GOLD + "ASC Performance Monitor",
+                    BarColor.GREEN,
+                    BarStyle.SOLID
+            );
 
-        // Schedule periodic budget recalculation (every 20 ticks = 1 second)
-        scheduler.runAsyncTimer(this::recalculateBudget, 1000L, 1000L);
+            // Schedule periodic budget recalculation (every 20 ticks = 1 second)
+            scheduler.runAsyncTimer(this::recalculateBudget, 1000L, 1000L);
 
-        // Schedule monitor HUD refresh (every 20 ticks = 1 second)
-        scheduler.runAsyncTimer(this::updateMonitorHud, 1000L, 1000L);
+            // Schedule monitor HUD refresh (every 20 ticks = 1 second)
+            scheduler.runAsyncTimer(this::updateMonitorHud, 1000L, 1000L);
 
-        // Schedule safe despawn sweep (every 200 ticks = 10 seconds)
-        scheduler.runAsyncTimer(this::runDespawnSweep, 5000L, 10000L);
+            // Schedule safe despawn sweep (every 200 ticks = 10 seconds)
+            scheduler.runAsyncTimer(this::runDespawnSweep, 5000L, 10000L);
 
-        Bukkit.getPluginManager().registerEvents(this, plugin);
+            Bukkit.getPluginManager().registerEvents(this, plugin);
+        }
     }
 
     @Override
