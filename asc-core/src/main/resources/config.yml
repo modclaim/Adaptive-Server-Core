@@ -1,0 +1,92 @@
+# ==============================================================================
+#            ADAPTIVE SERVER CORE (ASC) — CONFIGURATION FILE
+#      Enterprise-Grade Real-Time Performance & Adaptive Load Engine
+# ==============================================================================
+
+# General settings
+core:
+  debug: false
+  metrics-sample-rate-seconds: 1
+
+# ------------------------------------------------------------------------------
+# 2.1 DINAMIK / ADAPTIV MOB CAP TIZIMI (Load-Budget Model)
+# ------------------------------------------------------------------------------
+mobcap:
+  # Modulni yoqish / o'chirish
+  enabled: true
+
+  # Maqsadli ishlash ko'rsatkichlari (Target performance metrics)
+  target-mspt: 40.0
+  target-tps: 20.0
+
+  # Kam o'yinchi bo'lganda yoki server resursi bo'sh bo'lganda cap ko'payishi (1.0 = 100%, 1.5 = 150%)
+  max-bonus-multiplier: 1.5
+
+  # Yuqori yuk bo'lganda cap pasayishining minimal chegarasi (0.25 = bazaviy limitning 25% dan kamaymaydi)
+  min-floor-multiplier: 0.25
+
+  # Faolsiz / uzoq entity'larni avtomatik tozalash (faqat yuqori yukda ishlaydi)
+  despawn-sweep:
+    enabled: true
+    interval-seconds: 10
+    radius-blocks: 72
+    max-per-sweep: 50
+
+# ------------------------------------------------------------------------------
+# 2.2 REDSTONE VA HOPPER WATCHDOG (Anti-Lag-Machine)
+# ------------------------------------------------------------------------------
+redstone-watchdog:
+  enabled: true
+
+  # Bir xil kichik zonada (3x3x3) 1 soniyadagi yangilanish chegarasi
+  # Agar oshsa, mexanizm 'tebranuvchi soat' deb belgilanadi va throttle qilinadi
+  frequency-threshold: 16
+
+  # Hopper item-o'tkazish chegarasi (chunk bo'yicha 1 soniyada maksimal transferlar)
+  hopper-transfer-limit: 50
+
+  # Whitelist / Texnik zonalar (bu chunklarda cheklovlar ishlamaydi)
+  whitelisted-chunks: []
+
+# ------------------------------------------------------------------------------
+# 2.3 ELYTRA VA CHUNK GENERATSIYASI NAZORATI
+# ------------------------------------------------------------------------------
+chunk-throttle:
+  enabled: true
+
+  # Tez uchayotgan o'yinchilar traektoriyasi bo'yicha oldindan yuklash (predictive pre-gen)
+  predictive-pregen: true
+
+  # Server MSPT yukiga qarab ko'rish masofasini dinamik moslash
+  dynamic-view-distance:
+    enabled: true
+    min-distance: 6
+    max-distance: 12
+    step-interval-seconds: 10
+
+# ------------------------------------------------------------------------------
+# 2.4 CHUNK HIBERNATION / "LAZY SIMULATION" DVIGATELI
+# ------------------------------------------------------------------------------
+lazysim:
+  enabled: true
+
+  # Catch-up qilinadigan maksimal vaqt chegarasi (soatlarda, 168 = 7 kun)
+  max-catchup-hours: 168
+
+  # Qayta yuklanganda simulyatsiya qilinadigan tizimlar
+  processors:
+    furnaces: true     # Pechlarda yonilg'i va pishirish hisob-kitobi
+    crops: true        # O'simliklar o'sishi (deterministik formula)
+    villagers: true    # Qishloq aholisi savdo restocklari (MC kunlari bo'yicha)
+    animals: true      # Bolalarning ulg'ayishi va breeding cooldown
+    beehives: true     # Asalari uyalari va asal darajasi
+
+# ------------------------------------------------------------------------------
+# 3. MOSLASHUV VA INTEGRATSIYALAR (Compatibility Shims)
+# ------------------------------------------------------------------------------
+compatibility:
+  auto-detect-anti-lag: true
+  worldguard-integration: true
+  chunky-integration: true
+  mythicmobs-protection: true
+  placeholderapi-expansion: true

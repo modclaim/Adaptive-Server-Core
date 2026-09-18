@@ -1,0 +1,17 @@
+name: AdaptiveServerCore
+version: 1.0.0
+main: net.modclaim.asc.loader.AdaptiveServerCoreUniversalPlugin
+api-version: '1.20'
+author: ModClaim
+description: Universal Adaptive Server Performance Core Plugin for Paper, Purpur, Folia, and Spigot.
+softdepend: [WorldGuard, Chunky, ClearLag, LaggRemover, MythicMobs, PlaceholderAPI, Vault, ProtocolLib]
+folia-supported: true
+commands:
+  asc:
+    description: Adaptive Server Core primary administration command
+    permission: asc.admin
+    usage: /asc [subcommand]
+permissions:
+  asc.admin:
+    description: Grants access to Adaptive Server Core management commands and GUI
+    default: op

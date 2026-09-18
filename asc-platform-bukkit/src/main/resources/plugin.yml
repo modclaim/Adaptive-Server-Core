@@ -1,0 +1,16 @@
+name: AdaptiveServerCore
+version: 1.0.0
+main: net.modclaim.asc.platform.bukkit.AdaptiveServerCoreBukkitPlugin
+api-version: '1.16'
+author: ModClaim
+description: Adaptive Server Performance Core Plugin for Bukkit Baseline.
+softdepend: [WorldGuard, Chunky, ClearLag, LaggRemover, MythicMobs, PlaceholderAPI, Vault, ProtocolLib]
+commands:
+  asc:
+    description: Adaptive Server Core primary administration command
+    permission: asc.admin
+    usage: /asc [subcommand]
+permissions:
+  asc.admin:
+    description: Grants access to Adaptive Server Core management commands and GUI
+    default: op

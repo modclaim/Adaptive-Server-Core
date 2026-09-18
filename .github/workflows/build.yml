@@ -1,0 +1,38 @@
+name: Build & Verify Adaptive Server Core
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Run Tests & Build with Gradle
+        run: ./gradlew check build shadowJar --no-daemon
+
+      - name: Upload Artifacts (Universal & Platform Jars)
+        uses: actions/upload-artifact@v4
+        with:
+          name: AdaptiveServerCore-Jars
+          path: |
+            asc-loader/build/libs/AdaptiveServerCore-Universal*.jar
+            asc-platform-paper-latest/build/libs/AdaptiveServerCore-Paper-1.21*.jar
+            asc-platform-paper-legacy/build/libs/AdaptiveServerCore-Paper-Legacy*.jar
+            asc-platform-spigot/build/libs/AdaptiveServerCore-Spigot*.jar
+            asc-platform-bukkit/build/libs/AdaptiveServerCore-Bukkit*.jar
