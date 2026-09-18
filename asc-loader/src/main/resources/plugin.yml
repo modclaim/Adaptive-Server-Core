@@ -9,7 +9,7 @@ folia-supported: true
 commands:
   asc:
     description: Adaptive Server Core primary administration command
-    permission: asc.admin
+    permission-message: "§c[ASC] You must be a server operator (OP) to use /asc."
     usage: /asc [subcommand]
 permissions:
   asc.admin:

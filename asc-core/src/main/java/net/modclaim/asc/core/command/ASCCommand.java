@@ -35,7 +35,7 @@ public final class ASCCommand implements CommandExecutor {
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String label, @NotNull String[] args) {
         if (!sender.hasPermission("asc.admin")) {
-            sender.sendMessage(ChatColor.RED + "You do not have permission to use /asc.");
+            sender.sendMessage(ChatColor.RED + "[ASC] You do not have permission to use /asc. You must be a server operator (OP).");
             return true;
         }
 
