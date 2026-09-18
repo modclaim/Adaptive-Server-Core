@@ -5,7 +5,7 @@ plugins {
 
 allprojects {
     group = "net.modclaim.asc"
-    version = "1.0.0-SNAPSHOT"
+    version = "1.0.0"
 
     repositories {
         mavenCentral()
@@ -15,6 +15,11 @@ allprojects {
         maven("https://repo.extendedclip.com/content/repositories/placeholderapi/")
         maven("https://maven.enginehub.org/repo/")
     }
+}
+
+// Disable empty root project jar
+tasks.jar {
+    enabled = false
 }
 
 subprojects {
@@ -39,5 +44,28 @@ subprojects {
 
     tasks.withType<Test> {
         useJUnitPlatform()
+    }
+}
+
+// Convenient task to collect ready-to-upload release jars into a single folder
+tasks.register<Copy>("releaseJars") {
+    dependsOn(subprojects.mapNotNull { it.tasks.findByName("shadowJar") })
+
+    into(rootProject.layout.projectDirectory.dir("release"))
+
+    from(project(":asc-loader").tasks.named("shadowJar")) {
+        rename { "AdaptiveServerCore-Universal.jar" }
+    }
+    from(project(":asc-platform-paper-latest").tasks.named("shadowJar")) {
+        rename { "AdaptiveServerCore-Paper-1.21.jar" }
+    }
+    from(project(":asc-platform-paper-legacy").tasks.named("shadowJar")) {
+        rename { "AdaptiveServerCore-Paper-Legacy.jar" }
+    }
+    from(project(":asc-platform-spigot").tasks.named("shadowJar")) {
+        rename { "AdaptiveServerCore-Spigot.jar" }
+    }
+    from(project(":asc-platform-bukkit").tasks.named("shadowJar")) {
+        rename { "AdaptiveServerCore-Bukkit.jar" }
     }
 }
