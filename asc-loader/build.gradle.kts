@@ -16,4 +16,5 @@ dependencies {
 tasks.shadowJar {
     archiveBaseName.set("AdaptiveServerCore-Universal")
     archiveClassifier.set("")
+    exclude("paper-plugin.yml")
 }
