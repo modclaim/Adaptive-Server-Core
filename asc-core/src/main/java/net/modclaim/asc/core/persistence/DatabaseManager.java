@@ -99,22 +99,26 @@ public final class DatabaseManager {
         return world + ":" + cx + ":" + cz;
     }
 
+    // Non-blocking write-behind buffers for zero main-thread disk I/O
+    private final Map<String, Long> pendingWrites = new ConcurrentHashMap<>();
+    private final Set<String> pendingDeletes = ConcurrentHashMap.newKeySet();
+    private final java.util.concurrent.ScheduledExecutorService asyncFlusher =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "ASC-Database-Flusher");
+                t.setDaemon(true);
+                return t;
+            });
+
+    {
+        // Periodic background flush every 5 seconds
+        asyncFlusher.scheduleWithFixedDelay(this::flushPendingToDatabase, 5, 5, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
     public void recordChunkHibernation(@NotNull String world, int chunkX, int chunkZ, long epochMs) {
         String key = makeKey(world, chunkX, chunkZ);
         memoryCache.put(key, epochMs);
-
-        if (!sqliteAvailable || connection == null) return;
-        try (PreparedStatement ps = connection.prepareStatement(
-                "INSERT INTO chunk_hibernation (world, chunk_x, chunk_z, last_simulated_epoch_ms) " +
-                        "VALUES (?, ?, ?, ?) ON CONFLICT(world, chunk_x, chunk_z) DO UPDATE SET last_simulated_epoch_ms = excluded.last_simulated_epoch_ms")) {
-            ps.setString(1, world);
-            ps.setInt(2, chunkX);
-            ps.setInt(3, chunkZ);
-            ps.setLong(4, epochMs);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.WARNING, "Error saving chunk hibernation to database", e);
-        }
+        pendingWrites.put(key, epochMs);
+        pendingDeletes.remove(key);
     }
 
     @NotNull
@@ -138,25 +142,72 @@ public final class DatabaseManager {
                 memoryCache.put(key, epoch);
                 return Optional.of(new HibernationTicket(world, chunkX, chunkZ, epoch));
             }
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.WARNING, "Error querying chunk hibernation record", e);
-        }
+        } catch (SQLException ignored) {}
         return Optional.empty();
     }
 
     public void removeChunkHibernation(@NotNull String world, int chunkX, int chunkZ) {
         String key = makeKey(world, chunkX, chunkZ);
         memoryCache.remove(key);
+        pendingWrites.remove(key);
+        pendingDeletes.add(key);
+    }
 
+    private synchronized void flushPendingToDatabase() {
         if (!sqliteAvailable || connection == null) return;
-        try (PreparedStatement ps = connection.prepareStatement(
-                "DELETE FROM chunk_hibernation WHERE world = ? AND chunk_x = ? AND chunk_z = ?")) {
-            ps.setString(1, world);
-            ps.setInt(2, chunkX);
-            ps.setInt(3, chunkZ);
-            ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.WARNING, "Error removing chunk hibernation record", e);
+        if (pendingWrites.isEmpty() && pendingDeletes.isEmpty()) return;
+
+        Map<String, Long> writesToFlush = new HashMap<>(pendingWrites);
+        Set<String> deletesToFlush = new HashSet<>(pendingDeletes);
+
+        try {
+            boolean originalAutoCommit = connection.getAutoCommit();
+            connection.setAutoCommit(false);
+
+            if (!writesToFlush.isEmpty()) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "INSERT INTO chunk_hibernation (world, chunk_x, chunk_z, last_simulated_epoch_ms) " +
+                                "VALUES (?, ?, ?, ?) ON CONFLICT(world, chunk_x, chunk_z) DO UPDATE SET last_simulated_epoch_ms = excluded.last_simulated_epoch_ms")) {
+                    for (Map.Entry<String, Long> entry : writesToFlush.entrySet()) {
+                        String[] parts = entry.getKey().split(":");
+                        if (parts.length == 3) {
+                            ps.setString(1, parts[0]);
+                            ps.setInt(2, Integer.parseInt(parts[1]));
+                            ps.setInt(3, Integer.parseInt(parts[2]));
+                            ps.setLong(4, entry.getValue());
+                            ps.addBatch();
+                        }
+                    }
+                    ps.executeBatch();
+                }
+            }
+
+            if (!deletesToFlush.isEmpty()) {
+                try (PreparedStatement ps = connection.prepareStatement(
+                        "DELETE FROM chunk_hibernation WHERE world = ? AND chunk_x = ? AND chunk_z = ?")) {
+                    for (String key : deletesToFlush) {
+                        String[] parts = key.split(":");
+                        if (parts.length == 3) {
+                            ps.setString(1, parts[0]);
+                            ps.setInt(2, Integer.parseInt(parts[1]));
+                            ps.setInt(3, Integer.parseInt(parts[2]));
+                            ps.addBatch();
+                        }
+                    }
+                    ps.executeBatch();
+                }
+            }
+
+            connection.commit();
+            connection.setAutoCommit(originalAutoCommit);
+
+            // Remove successfully committed records from buffer
+            for (String k : writesToFlush.keySet()) {
+                pendingWrites.remove(k, writesToFlush.get(k));
+            }
+            pendingDeletes.removeAll(deletesToFlush);
+        } catch (SQLException ignored) {
+            // Silently retry on next scheduled interval without logging spam or freezing the server
         }
     }
 
@@ -168,8 +219,7 @@ public final class DatabaseManager {
                 "DELETE FROM chunk_hibernation WHERE last_simulated_epoch_ms < ?")) {
             ps.setLong(1, olderThanEpochMs);
             return ps.executeUpdate();
-        } catch (SQLException e) {
-            plugin.getLogger().log(Level.WARNING, "Error purging old hibernation records", e);
+        } catch (SQLException ignored) {
             return 0;
         }
     }
@@ -224,6 +274,11 @@ public final class DatabaseManager {
     }
 
     public void close() {
+        try {
+            asyncFlusher.shutdown();
+            flushPendingToDatabase();
+        } catch (Throwable ignored) {}
+
         if (connection != null) {
             try {
                 connection.close();

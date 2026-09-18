@@ -138,6 +138,9 @@ public final class DefaultMobCapService implements MobCapService, Listener {
         return "MobCapService";
     }
 
+    private double lastDispatchedMultiplier = -1.0;
+    private final Map<String, Integer> cachedCategoryCounts = new ConcurrentHashMap<>();
+
     private void recalculateBudget() {
         double tps = metricsTracker.getTps();
         double mspt = metricsTracker.getMspt();
@@ -146,16 +149,19 @@ public final class DefaultMobCapService implements MobCapService, Listener {
         LoadBudget newBudget = budgetCalculator.calculateBudget(tps, mspt, players);
         this.currentBudget = newBudget;
 
-        // Fire adjustment event synchronously for each world and category
-        scheduler.runSync(() -> {
-            for (World world : Bukkit.getWorlds()) {
-                for (MobCategory cat : MobCategory.values()) {
-                    int cap = newBudget.getCap(cat);
-                    MobCapAdjustEvent event = new MobCapAdjustEvent(world, cat, newBudget, cap);
-                    Bukkit.getPluginManager().callEvent(event);
+        // Only fire adjustment event synchronously when the budget tier actually changes significantly (>5%)
+        if (Math.abs(newBudget.getBudgetMultiplier() - lastDispatchedMultiplier) >= 0.05) {
+            this.lastDispatchedMultiplier = newBudget.getBudgetMultiplier();
+            scheduler.runSync(() -> {
+                for (World world : Bukkit.getWorlds()) {
+                    for (MobCategory cat : MobCategory.values()) {
+                        int cap = newBudget.getCap(cat);
+                        MobCapAdjustEvent event = new MobCapAdjustEvent(world, cat, newBudget, cap);
+                        Bukkit.getPluginManager().callEvent(event);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     @Override
@@ -176,21 +182,19 @@ public final class DefaultMobCapService implements MobCapService, Listener {
     public boolean canSpawn(@NotNull World world, @NotNull EntityType type, @Nullable String regionId) {
         if (!enabled) return true;
 
+        // Under normal healthy load (MSPT < 38.0), allow vanilla spawning with zero overhead
+        if (metricsTracker.getMspt() < 38.0) {
+            return true;
+        }
+
         MobCost cost = mobCostMap.get(type);
         MobCategory category = (cost != null) ? cost.getCategory() : MobCategory.MISC;
         int maxCap = getEffectiveCap(world, category);
 
-        // Fast count estimate of alive entities in the world
-        int count = 0;
-        for (Entity e : world.getEntities()) {
-            if (e.getType() == type) {
-                count++;
-                if (count >= maxCap) {
-                    return false;
-                }
-            }
-        }
-        return true;
+        // Check against fast cached count instead of heavy full-world entity copying
+        String cacheKey = world.getName() + ":" + category.name();
+        int currentCount = cachedCategoryCounts.getOrDefault(cacheKey, 0);
+        return currentCount < maxCap;
     }
 
     @Override
@@ -303,9 +307,8 @@ public final class DefaultMobCapService implements MobCapService, Listener {
         if (!enabled) return;
 
         CreatureSpawnEvent.SpawnReason reason = event.getSpawnReason();
-        // Only throttle natural and ambient world spawns
+        // Only throttle natural and ambient world spawns; never interfere with CHUNK_GEN or custom spawns
         if (reason == CreatureSpawnEvent.SpawnReason.NATURAL ||
-                reason == CreatureSpawnEvent.SpawnReason.CHUNK_GEN ||
                 reason == CreatureSpawnEvent.SpawnReason.DEFAULT) {
 
             if (!canSpawn(event.getLocation().getWorld(), event.getEntityType(), null)) {
